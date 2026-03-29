@@ -39,23 +39,30 @@ else
   GREEN=''; YELLOW=''; RED=''; BOLD=''; RESET=''
 fi
 
-info()    { printf "${GREEN}[OK]${RESET}  %s\n" "$*"; }
-warn()    { printf "${YELLOW}[!!]${RESET}  %s\n" "$*"; }
+info()    { printf "${GREEN}[OK]${RESET}  %s\n" "$*" >&2; }
+warn()    { printf "${YELLOW}[!!]${RESET}  %s\n" "$*" >&2; }
 error()   { printf "${RED}[ERR]${RESET} %s\n" "$*" >&2; }
-header()  { echo -e "\n${BOLD}$*${RESET}"; }
+header()  { echo -e "\n${BOLD}$*${RESET}" >&2; }
 
-# Progress bar: [=======>    ] 3/8 (tqdm-style)
 progress_bar() {
-  local current="$1" total="$2" width="${3:-20}" i filled empty
+  local current="$1" total="$2" width="${3:-20}" i filled empty pct
   (( total > 0 )) || return
   filled=$(( width * current / total ))
   empty=$(( width - filled ))
+  pct=$(( current * 100 / total ))
   printf "\r  ["
   for (( i=0; i<filled; i++ )); do printf "="; done
   if (( filled < width )); then printf ">"; (( empty-- )); fi
   for (( i=0; i<empty; i++ )); do printf " "; done
-  printf "] %s/%s" "$current" "$total"
+  printf "] %3d%%" "$pct"
   [[ -t 1 ]] || printf "\n"
+}
+
+show_agent_progress() {
+  local current="$1" total="$2" name="$3"
+  local pct=$(( current * 100 / total ))
+  printf "\r  %d/%d (%d%%)  %-50s" "$current" "$total" "$pct" "$name" >&2
+  [[ -t 2 ]] || printf "\n" >&2
 }
 
 # --- Paths ---
@@ -520,6 +527,7 @@ HEREDOC
 
 run_conversions() {
   local tool="$1"
+  local total="${2:-0}"
   local count=0
 
   for dir in "${AGENT_DIRS[@]}"; do
@@ -527,14 +535,16 @@ run_conversions() {
     [[ -d "$dirpath" ]] || continue
 
     while IFS= read -r -d '' file; do
-      # Skip files without frontmatter (non-agent docs like QUICKSTART.md)
       local first_line
       first_line="$(head -1 "$file")"
       [[ "$first_line" == "---" ]] || continue
 
-      local name
-      name="$(get_field "name" "$file")"
-      [[ -n "$name" ]] || continue
+      local agent_name
+      agent_name="$(get_field "name" "$file")"
+      [[ -n "$agent_name" ]] || continue
+
+      (( count++ )) || true
+      show_agent_progress "$count" "$total" "$agent_name"
 
       case "$tool" in
         antigravity) convert_antigravity "$file" ;;
@@ -548,10 +558,10 @@ run_conversions() {
         windsurf)    accumulate_windsurf "$file" ;;
       esac
 
-      (( count++ )) || true
     done < <(find "$dirpath" -name "*.md" -type f -print0 | sort -z)
   done
 
+  printf "\n"
   echo "$count"
 }
 
@@ -634,24 +644,21 @@ main() {
     rm -rf "$parallel_out_dir"
     local idx=7
     for t in aider windsurf; do
-      progress_bar "$idx" "$n_tools"
       printf "\n"
       header "Converting: $t ($idx/$n_tools)"
       local count
-      count="$(run_conversions "$t")"
+      count="$(run_conversions "$t" "$agent_count")"
       total=$(( total + count ))
-      info "Converted $count agents for $t"
       (( idx++ )) || true
     done
   else
     local i=0
     for t in "${tools_to_run[@]}"; do
       (( i++ )) || true
-      progress_bar "$i" "$n_tools"
       printf "\n"
       header "Converting: $t ($i/$n_tools)"
       local count
-      count="$(run_conversions "$t")"
+      count="$(run_conversions "$t" "$agent_count")"
       total=$(( total + count ))
 
       # Gemini CLI also needs the extension manifest (written by this process when --tool gemini-cli)
