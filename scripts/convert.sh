@@ -7,7 +7,7 @@
 # integration files after adding or modifying agents.
 #
 # Usage:
-#   ./scripts/convert.sh [--tool <name>] [--out <dir>] [--parallel] [--jobs N] [--help]
+#   ./scripts/convert.sh [--tool <name>] [--out <dir>] [--parallel] [--jobs N] [--list] [--dry-run] [--help]
 #
 # Tools:
 #   antigravity  — Antigravity skill files (~/.gemini/antigravity/skills/)
@@ -19,13 +19,16 @@
 #   openclaw     — OpenClaw SOUL.md files (openclaw_workspace/<agent>/SOUL.md)
 #   qwen         — Qwen Code SubAgent files (~/.qwen/agents/*.md)
 #   kimi         — Kimi Code CLI agent files (~/.config/kimi/agents/)
-#   all          — All tools (default)
+#   all          — All tools (default, but slow — prefer --tool <name>)
 #
 # Output is written to integrations/<tool>/ relative to the repo root.
 # This script never touches user config dirs — see install.sh for that.
 #
+# Options:
 #   --parallel       When tool is 'all', run independent tools in parallel (output order may vary).
 #   --jobs N         Max parallel jobs when using --parallel (default: nproc or 4).
+#   --list           List available tools and count of agents, then exit.
+#   --dry-run        Preview what would be converted without writing files.
 
 set -euo pipefail
 
@@ -68,7 +71,43 @@ AGENT_DIRS=(
 
 # --- Usage ---
 usage() {
-  sed -n '3,26p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,32p' "$0" | sed 's/^# \{0,1\}//'
+  exit 0
+}
+
+count_agents() {
+  local count=0
+  for dir in "${AGENT_DIRS[@]}"; do
+    local dirpath="$REPO_ROOT/$dir"
+    [[ -d "$dirpath" ]] || continue
+    count=$(( count + $(find "$dirpath" -name "*.md" -type f | wc -l) ))
+  done
+  echo "$count"
+}
+
+list_tools() {
+  local agent_count
+  agent_count="$(count_agents)"
+  
+  header "The Agency -- Available Tools"
+  echo ""
+  printf "  ${BOLD}%-15s %s${RESET}\n" "Tool" "Description"
+  echo "  ─────────────────────────────────────────────────────────"
+  printf "  %-15s %s\n" "antigravity" "Antigravity skill files"
+  printf "  %-15s %s\n" "gemini-cli" "Gemini CLI extension"
+  printf "  %-15s %s\n" "opencode" "OpenCode agent files"
+  printf "  %-15s %s\n" "cursor" "Cursor rule files (.mdc)"
+  printf "  %-15s %s\n" "aider" "Single CONVENTIONS.md"
+  printf "  %-15s %s\n" "windsurf" "Single .windsurfrules"
+  printf "  %-15s %s\n" "openclaw" "OpenClaw workspace files"
+  printf "  %-15s %s\n" "qwen" "Qwen Code SubAgents"
+  printf "  %-15s %s\n" "kimi" "Kimi Code agents"
+  printf "  %-15s %s\n" "all" "All tools (slow)"
+  echo ""
+  info "Found ${BOLD}${agent_count}${RESET} agent files in ${#AGENT_DIRS[@]} directories"
+  echo ""
+  info "Recommended: ${BOLD}./scripts/convert.sh --tool <name>${RESET}"
+  info "Example:     ${BOLD}./scripts/convert.sh --tool cursor${RESET}"
   exit 0
 }
 
@@ -521,6 +560,7 @@ run_conversions() {
 main() {
   local tool="all"
   local use_parallel=false
+  local dry_run=false
   local parallel_jobs
   parallel_jobs="$(parallel_jobs_default)"
 
@@ -530,6 +570,8 @@ main() {
       --out)      OUT_DIR="${2:?'--out requires a value'}"; shift 2 ;;
       --parallel) use_parallel=true; shift ;;
       --jobs)     parallel_jobs="${2:?'--jobs requires a value'}"; shift 2 ;;
+      --list)     list_tools ;;
+      --dry-run)  dry_run=true; shift ;;
       --help|-h)  usage ;;
       *)          error "Unknown option: $1"; usage ;;
     esac
@@ -543,11 +585,24 @@ main() {
     exit 1
   fi
 
+  local agent_count
+  agent_count="$(count_agents)"
+
+  # Warn if converting all tools (can be slow)
+  if [[ "$tool" == "all" ]]; then
+    warn "Converting ALL 9 tools — this is slow (${agent_count} agents)."
+    warn "Tip: use --tool <name> for faster conversion (e.g., --tool cursor)"
+    warn "Or run --list to see available tools"
+    echo ""
+  fi
+
   header "The Agency -- Converting agents to tool-specific formats"
   echo "  Repo:   $REPO_ROOT"
   echo "  Output: $OUT_DIR"
   echo "  Tool:   $tool"
   echo "  Date:   $TODAY"
+  echo "  Agents: ${agent_count}"
+  $dry_run && echo "  Mode:   DRY RUN (no files will be written)"
   if $use_parallel && [[ "$tool" == "all" ]]; then
     info "Parallel mode: output buffered so each tool's output stays together."
   fi
