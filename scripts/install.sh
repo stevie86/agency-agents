@@ -374,7 +374,7 @@ install_gemini_cli() {
 
 install_opencode() {
   local src="$INTEGRATIONS/opencode/agents"
-  local dest="${PWD}/.opencode/agents"
+  local dest="${HOME}/.config/opencode/agents"
   local count=0
   [[ -d "$src" ]] || { err "integrations/opencode missing. Run convert.sh first."; return 1; }
   mkdir -p "$dest"
@@ -382,8 +382,8 @@ install_opencode() {
   while IFS= read -r -d '' f; do
     cp "$f" "$dest/"; (( count++ )) || true
   done < <(find "$src" -maxdepth 1 -name "*.md" -print0)
-  ok "OpenCode: $count agents -> $dest"
-  warn "OpenCode: project-scoped. Run from your project root to install there."
+  ok "OpenCode: $count agents -> $dest (global)"
+  warn "For project-specific agents: mkdir -p .opencode/agents && cp $src/*.md .opencode/agents/"
 }
 
 install_openclaw() {
@@ -421,8 +421,7 @@ install_cursor() {
   while IFS= read -r -d '' f; do
     cp "$f" "$dest/"; (( count++ )) || true
   done < <(find "$src" -maxdepth 1 -name "*.mdc" -print0)
-  ok "Cursor: $count rules -> $dest"
-  warn "Cursor: project-scoped. Run from your project root to install there."
+  ok "Cursor: $count rules -> $dest (this project only)"
 }
 
 install_aider() {
@@ -434,8 +433,7 @@ install_aider() {
     return 0
   fi
   cp "$src" "$dest"
-  ok "Aider: installed -> $dest"
-  warn "Aider: project-scoped. Run from your project root to install there."
+  ok "Aider: installed -> $dest (this project only)"
 }
 
 install_windsurf() {
@@ -447,13 +445,12 @@ install_windsurf() {
     return 0
   fi
   cp "$src" "$dest"
-  ok "Windsurf: installed -> $dest"
-  warn "Windsurf: project-scoped. Run from your project root to install there."
+  ok "Windsurf: installed -> $dest (this project only)"
 }
 
 install_qwen() {
   local src="$INTEGRATIONS/qwen/agents"
-  local dest="${PWD}/.qwen/agents"
+  local dest="${HOME}/.qwen/agents"
   local count=0
 
   [[ -d "$src" ]] || { err "integrations/qwen missing. Run convert.sh first."; return 1; }
@@ -466,9 +463,8 @@ install_qwen() {
     (( count++ )) || true
   done < <(find "$src" -maxdepth 1 -name "*.md" -print0)
 
-  ok "Qwen Code: installed $count agents to $dest"
-  warn "Qwen Code: project-scoped. Run from your project root to install there."
-  warn "Tip: Run '/agents manage' in Qwen Code to refresh, or restart session"
+  ok "Qwen Code: $count agents -> $dest (global)"
+  warn "For project-specific: mkdir -p .qwen/agents && cp $src/*.md .qwen/agents/"
 }
 
 install_kimi() {
