@@ -79,5 +79,4 @@ integrations/kimi/*/
 !integrations/openclaw/README.md
 !integrations/kimi/README.md
 
-# Local AI agent development guidelines (not for repo)
-AGENTS.md
+# AGENTS.md is now tracked as project documentation
