@@ -12,5 +12,10 @@
     "nyquist_validation": true
   },
   "parallelization": true,
-  "brave_search": false
+  "brave_search": false,
+  "model_overrides": {
+    "researcher": "ollama-cloud/minimax-m2.7",
+    "synthesizer": "ollama-cloud/minimax-m2.7",
+    "roadmapper": "ollama-cloud/minimax-m2.7"
+  }
 }
