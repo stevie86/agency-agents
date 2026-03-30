@@ -215,8 +215,11 @@ Output adapts accordingly — no code for non-technical, full implementation for
 
 | Date | What Changed | Why |
 |------|--------------|-----|
+| 2026-03-29 | Added comprehensive IMPROVEMENTS.md | Document all enhancements vs upstream |
 | 2026-03-29 | Added Context Gate to Sisyphus integration | Adaptive output based on user role and desired depth |
 | 2026-03-29 | Added workflow-sequences.md | Multi-agent pipeline patterns (feature dev, security audit, etc.) |
 | 2026-03-29 | Added agents-registry.md | Keyword-based routing for auto-delegation |
 | 2026-03-29 | Improved convert.sh UX | Added --list, per-agent progress, warnings |
 | 2026-03-29 | Improved install.sh messages | Clearer global vs project-scoped messaging |
+
+**See [IMPROVEMENTS.md](IMPROVEMENTS.md) for complete before/after comparison.**
